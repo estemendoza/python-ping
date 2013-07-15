@@ -351,7 +351,7 @@ class Ping(object):
             return
         
         # Print opening line
-        self._stdout.write("PYTHON PING %s (%s):  %d bytes of data.\n" % (self.stats.destination_host, self.stats.destination_ip, self.packet_size))
+        sys.stdout.write("PYTHON PING %s (%s):  %d bytes of data.\n" % (self.stats.destination_host, self.stats.destination_ip, self.packet_size))
 
 #=============================================================================#
     def do_one(self):
@@ -581,17 +581,17 @@ class Ping(object):
 #=============================================================================#
     
     def print_stats(self):
-        self._stdout.write("\n--- %s PYTHON PING statistics ---\n" % (self.stats.destination_host))
+        sys.stdout.write("\n--- %s PYTHON PING statistics ---\n" % (self.stats.destination_host))
 
         self.calculate_packet_loss()
 
-        self._stdout.write("%d packets transmitted, %d received, %0.1f%% packet loss, time %dms\n" % (
+        sys.stdout.write("%d packets transmitted, %d received, %0.1f%% packet loss, time %dms\n" % (
             self.stats.packets_sent, self.stats.packets_received, self.stats.lost_rate, self.stats.total_time
         ))
 
         if self.stats.packets_received > 0:
             self.calculate_packet_average()
-            self._stdout.write("round-trip (ms)  min/avg/max = %0.3f/%0.3f/%0.3f\n" % (
+            sys.stdout.write("round-trip (ms)  min/avg/max = %0.3f/%0.3f/%0.3f\n" % (
                 self.stats.min_time, self.stats.average_time, self.stats.max_time))
     
 #=============================================================================#
@@ -694,7 +694,7 @@ def main(arguments):
     parser.add_argument('destination', type=str,
                        help='destination')
     parser.add_argument('--test', action="store_true", help='Run a basic test suite')
-    parser.add_argument('-q', '--quiet', action="store_true", help='Quiet output.')
+    parser.add_argument('-q', '--quiet', action="store_true", help='Quiet output.  Nothing is displayed except the summary lines at startup time and when finished.')
     parser.add_argument('--ipv6', action="store_true", help='Run using IPv6, instead of the default (IPv4)')
     parser.add_argument('-c', dest='count', metavar='count', type=int, default=3, help='Stop after sending count ECHO_REQUEST packets.')
     parser.add_argument('-s', dest='packetsize', metavar='packetsize', type=int, default=64, help='Specifies the number of data bytes to be sent.  The default is 56, which translates into 64 ICMP data bytes when combined with the 8 bytes of ICMP header data.')
