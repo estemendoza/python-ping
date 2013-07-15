@@ -652,13 +652,8 @@ class Ping(object):
     
 #=============================================================================#
     
-def ping(hostname, count=3, timeout=3000, packet_size=64, own_id=None, quiet=False):
-    p = Ping(hostname, timeout, packet_size, own_id, quiet)
-    stats = p.run(count)
-    return(not stats.packets_received)
-    
-def ping6(hostname, count=3, timeout=3000, packet_size=64, own_id=None, quiet=False):
-    p = Ping(hostname, timeout, packet_size, own_id, quiet, True)
+def ping(hostname, count=3, timeout=3000, packet_size=64, own_id=None, quiet=False, ipv6=False):
+    p = Ping(hostname, timeout, packet_size, own_id, quiet, ipv6)
     stats = p.run(count)
     return(not stats.packets_received)
     
@@ -671,32 +666,57 @@ Usage: %s hostname
     sys.stderr.write(usage_message)
     
 #=============================================================================#
+def run_tests():
+    # These should work:
+    ping("8.8.8.8")
+    ping("heise.de")
+    ping("google.com")
+
+    # Inconsistent on Windows w/ ActivePython (Python 3.2 resolves correctly
+    # to the local host, but 2.7 tries to resolve to the local *gateway*)
+    ping("localhost")
+
+    # Should fail with 'getaddrinfo failed':
+    ping("foobar_url.foobar")
+
+    # Should fail (timeout), but it depends on the local network:
+    ping("192.168.255.254")
+
+    # Should fails with 'The requested address is not valid in its context':
+    ping("0.0.0.0")
+    
+    
+#=============================================================================#
+def main(arguments):
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Send ICMP ECHO_REQUEST to network hosts')
+    parser.add_argument('destination', type=str,
+                       help='destination')
+    parser.add_argument('--test', action="store_true", help='Run a basic test suite')
+    parser.add_argument('-q', '--quiet', action="store_true", help='Quiet output.')
+    parser.add_argument('--ipv6', action="store_true", help='Run using IPv6, instead of the default (IPv4)')
+    parser.add_argument('-c', dest='count', metavar='count', type=int, default=3, help='Stop after sending count ECHO_REQUEST packets.')
+    parser.add_argument('-s', dest='packetsize', metavar='packetsize', type=int, default=64, help='Specifies the number of data bytes to be sent.  The default is 56, which translates into 64 ICMP data bytes when combined with the 8 bytes of ICMP header data.')
+    parser.add_argument('-W', dest='timeout', metavar='timeout', type=int, default=3, help='Time to wait for a response, in seconds.')
+    
+    args = parser.parse_args()
+
+    if args.test:
+        run_tests()
+        sys.exit(1)
+        
+    retval = ping(hostname=args.destination,
+                  count=args.count,
+                  timeout=args.timeout,
+                  packet_size=args.packetsize,
+                  own_id=None,
+                  quiet=args.quiet,
+                  ipv6=args.ipv6
+                  )
+    sys.exit(retval)
+
+    
+#=============================================================================#
 if __name__ == '__main__':
-    # FIXME: Add a real CLI
-    if len(sys.argv) == 1:
-
-        # These should work:
-        ping("8.8.8.8")
-        ping("heise.de")
-        ping("google.com")
-
-        # Inconsistent on Windows w/ ActivePython (Python 3.2 resolves correctly
-        # to the local host, but 2.7 tries to resolve to the local *gateway*)
-        ping("localhost")
-
-        # Should fail with 'getaddrinfo failed':
-        ping("foobar_url.foobar")
-
-        # Should fail (timeout), but it depends on the local network:
-        ping("192.168.255.254")
-
-        # Should fails with 'The requested address is not valid in its context':
-        ping("0.0.0.0")
-        sys.exit(1)
-    elif len(sys.argv) == 2:
-        retval = ping(sys.argv[1])
-        sys.exit(retval)
-    else:
-        usage()
-        #sys.stderr.write("Error: call ./ping.py hostname\n")
-        sys.exit(1)
+    main(sys.argv)
