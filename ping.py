@@ -344,8 +344,9 @@ class Ping(object):
                 self.stats.destination_ip = info[4][0]
             else:
                 self.stats.destination_ip = socket.gethostbyname(self.stats.destination_host)
-        except socket.error, e:
-            self._stderr.write("\nPYTHON PING: Unknown host: %s (%s)\n" % (self.stats.destination_host, e.args[1]))
+        except socket.error:
+            etype, evalue, etb = sys.exc_info()
+            self._stderr.write("\nPYTHON PING: Unknown host: %s (%s)\n" % (self.stats.destination_host, evalue.args[1]))
             #sys.exit(2)
             self.unknown_host = True
             return
@@ -366,7 +367,8 @@ class Ping(object):
                 current_socket = socket.socket(socket.AF_INET6, socket.SOCK_RAW, socket.getprotobyname("ipv6-icmp"))
             else:
                 current_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp"))
-        except socket.error, e:
+        except socket.error:
+            etype, evalue, etb = sys.exc_info()
 #            if e.args[0] == 1:
 #                # Operation not permitted - Add more information to traceback
 #                etype, evalue, etb = sys.exc_info()
@@ -374,7 +376,7 @@ class Ping(object):
 #                    "%s - Note that ICMP messages can only be send from processes running as root." % evalue
 #                )
 #                raise etype, evalue, etb
-            self._stderr.write("failed. (socket error: '%s')\n" % e.args[1])
+            self._stderr.write("failed. (socket error: '%s')\n" % evalue.args[1])
             raise # raise the original error
     
         send_time = self.send_one_ping(current_socket)
@@ -486,8 +488,9 @@ class Ping(object):
                 current_socket.sendto(packet, (self.stats.destination_ip, self.stats.destination_port, 0, 0))
             else:
                 current_socket.sendto(packet, (self.stats.destination_ip, self.stats.destination_port))
-        except socket.error, e:
-            self._stderr.write("General failure (%s)\n" % (e.args[1]))
+        except socket.error:
+            etype, evalue, etb = sys.exc_info()
+            self._stderr.write("General failure (%s)\n" % (evalue.args[1]))
             send_time = None
     
         return send_time
@@ -705,7 +708,7 @@ def main(arguments):
         parser.add_argument('-W', dest='timeout', metavar='timeout', type=int, default=3, help='Time to wait for a response, in seconds.')
         
         args = parser.parse_args()
-    except ImportError, evalue:
+    except ImportError:
         from optparse import OptionParser
         
         parser = OptionParser(description='Send ICMP ECHO_REQUEST to network hosts')
