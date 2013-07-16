@@ -688,19 +688,38 @@ def run_tests():
     
 #=============================================================================#
 def main(arguments):
-    import argparse
-
-    parser = argparse.ArgumentParser(description='Send ICMP ECHO_REQUEST to network hosts')
-    parser.add_argument('destination', type=str,
-                       help='destination')
-    parser.add_argument('--test', action="store_true", help='Run a basic test suite')
-    parser.add_argument('-q', '--quiet', action="store_true", help='Quiet output.  Nothing is displayed except the summary lines at startup time and when finished.')
-    parser.add_argument('--ipv6', action="store_true", help='Run using IPv6, instead of the default (IPv4)')
-    parser.add_argument('-c', dest='count', metavar='count', type=int, default=3, help='Stop after sending count ECHO_REQUEST packets.')
-    parser.add_argument('-s', dest='packetsize', metavar='packetsize', type=int, default=64, help='Specifies the number of data bytes to be sent.  The default is 56, which translates into 64 ICMP data bytes when combined with the 8 bytes of ICMP header data.')
-    parser.add_argument('-W', dest='timeout', metavar='timeout', type=int, default=3, help='Time to wait for a response, in seconds.')
     
-    args = parser.parse_args()
+    # There is some duplication in trying to not break for older versions.
+    # OptionParser is still present in current versions, but it is deprecated,
+    # in favor of argparse.
+    try:
+        import argparse
+
+        parser = argparse.ArgumentParser(description='Send ICMP ECHO_REQUEST to network hosts')
+        parser.add_argument('destination', type=str, help='destination')
+        parser.add_argument('--test', action="store_true", help='Run a basic test suite')
+        parser.add_argument('-q', '--quiet', action="store_true", help='Quiet output.  Nothing is displayed except the summary lines at startup time and when finished.')
+        parser.add_argument('--ipv6', action="store_true", help='Run using IPv6, instead of the default (IPv4)')
+        parser.add_argument('-c', dest='count', metavar='count', type=int, default=3, help='Stop after sending count ECHO_REQUEST packets.')
+        parser.add_argument('-s', dest='packetsize', metavar='packetsize', type=int, default=64, help='Specifies the number of data bytes to be sent.  The default is 56, which translates into 64 ICMP data bytes when combined with the 8 bytes of ICMP header data.')
+        parser.add_argument('-W', dest='timeout', metavar='timeout', type=int, default=3, help='Time to wait for a response, in seconds.')
+        
+        args = parser.parse_args()
+    except ImportError, evalue:
+        from optparse import OptionParser
+        
+        parser = OptionParser(description='Send ICMP ECHO_REQUEST to network hosts')
+        parser.add_option('--test', action="store_true", help='Run a basic test suite')
+        parser.add_option('-q', '--quiet', action="store_true", help='Quiet output.  Nothing is displayed except the summary lines at startup time and when finished.')
+        parser.add_option('--ipv6', action="store_true", help='Run using IPv6, instead of the default (IPv4)')
+        parser.add_option('-c', dest='count', metavar='count', type=int, default=3, help='Stop after sending count ECHO_REQUEST packets.')
+        parser.add_option('-s', dest='packetsize', metavar='packetsize', type=int, default=64, help='Specifies the number of data bytes to be sent.  The default is 56, which translates into 64 ICMP data bytes when combined with the 8 bytes of ICMP header data.')
+        parser.add_option('-W', dest='timeout', metavar='timeout', type=int, default=3, help='Time to wait for a response, in seconds.')
+        
+        (args, positional_args) = parser.parse_args()
+        
+        # Add the destination to this object to match argparse.parse_args() output
+        args.destination = positional_args[0]
 
     if args.test:
         run_tests()
