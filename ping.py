@@ -302,7 +302,7 @@ def calculate_checksum(source_string):
                           # in ping)
 
     my_sum = (my_sum >> 16) + (my_sum & 0xffff)  # Add high 16 and low 16 bits
-    my_sum += (my_sum >> 16)                     # Add carry from above (if any)
+    my_sum += (my_sum >> 16)                     # Add carry from above, if any
     answer = ~my_sum & 0xffff                    # Invert & truncate to 16 bits
     answer = socket.htons(answer)
 
@@ -381,10 +381,12 @@ class Ping(object):
         try:
             # One could use UDP here, but it's obscure
             if self.ipv6:
-                current_socket = socket.socket(socket.AF_INET6, socket.SOCK_RAW,
+                current_socket = socket.socket(socket.AF_INET6,
+                                           socket.SOCK_RAW,
                                            socket.getprotobyname("ipv6-icmp"))
             else:
-                current_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW,
+                current_socket = socket.socket(socket.AF_INET,
+                                           socket.SOCK_RAW,
                                            socket.getprotobyname("icmp"))
         except socket.error:
             etype, evalue, etb = sys.exc_info()
@@ -419,7 +421,8 @@ class Ping(object):
             if self.ipv6:
                 from_info = self.stats.destination_host
             else:
-                from_info = "%s (%s)" % (self.stats.destination_host, host_addr)
+                from_info = "%s (%s)" % (self.stats.destination_host,
+                                         host_addr)
 
         if receive_time:
             ip_header_ttl = ip_header["ttl"]
@@ -743,8 +746,8 @@ def main(arguments):
         parser.add_argument('--test', action="store_true",
             help='Run a basic test suite')
         parser.add_argument('-q', '--quiet', action="store_true",
-            help='Quiet output.  Nothing is displayed except the summary lines '
-                 'at startup time and when finished.')
+            help='Quiet output.  Nothing is displayed except the summary '
+                 'lines at startup time and when finished.')
         parser.add_argument('--ipv6', action="store_true",
             help='Run using IPv6, instead of the default (IPv4)')
         parser.add_argument('-c', dest='count', metavar='count', type=int,
@@ -767,8 +770,8 @@ def main(arguments):
         parser.add_option('--test', action="store_true",
             help='Run a basic test suite')
         parser.add_option('-q', '--quiet', action="store_true",
-            help='Quiet output.  Nothing is displayed except the summary lines '
-                 'at startup time and when finished.')
+            help='Quiet output.  Nothing is displayed except the summary '
+                 'lines at startup time and when finished.')
         parser.add_option('--ipv6', action="store_true",
             help='Run using IPv6, instead of the default (IPv4)')
         parser.add_option('-c', dest='count', metavar='count', type=int,
