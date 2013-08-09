@@ -69,9 +69,9 @@
     * Adding quiet_ping function - This way we'll be able to use this script
         as external lib.
     * Changing default timeout to 3s. (1second is not enought)
-    * Switching data syze to packet size. It's easyer for the user to ignore the
-        fact that the packet headr is 8b and the datasize 64 will make packet with
-        size 72.
+    * Switching data syze to packet size. It's easyer for the user to ignore
+        the fact that the packet headr is 8b and the datasize 64 will make
+        packet with size 72.
 
     October 12, 2011
     --------------
@@ -202,7 +202,13 @@
 """
 
 #=============================================================================#
-import os, sys, socket, struct, select, time, signal
+import os
+import sys
+import socket
+import struct
+import select
+import time
+import signal
 from icmp_messages import *
 
 if sys.platform == "win32":
@@ -215,13 +221,13 @@ else:
 #=============================================================================#
 # ICMP parameters
 
-ICMP_ECHOREPLY        =    0 # Echo reply (per RFC792)
-ICMP_ECHO             =    8 # Echo request (per RFC792)
-ICMP_ECHO_IPV6        =  128 # Echo request (per RFC4443)
-ICMP_ECHO_IPV6_REPLY  =  129 # Echo request (per RFC4443)
-ICMP_PORT             =    1
-ICMP_PORT_IPV6        =   58
-ICMP_MAX_RECV         = 2048 # Max size of incoming buffer
+ICMP_ECHOREPLY = 0          # Echo reply (per RFC792)
+ICMP_ECHO = 8               # Echo request (per RFC792)
+ICMP_ECHO_IPV6 = 128        # Echo request (per RFC4443)
+ICMP_ECHO_IPV6_REPLY = 129  # Echo request (per RFC4443)
+ICMP_PORT = 1
+ICMP_PORT_IPV6 = 58
+ICMP_MAX_RECV = 2048        # Max size of incoming buffer
 
 MAX_SLEEP = 1000
 
@@ -235,23 +241,26 @@ MAX_SLEEP = 1000
     # totTime  = 0
     # avrgTime = 0
     # fracLoss = 1.0
-# 
+#
 # myStats = MyStats # NOT Used globally anymore.
-# 
+#
 #
 
+
 class PingStats:
-    destination_ip   = "0.0.0.0"
+    destination_ip = "0.0.0.0"
     destination_host = "unknown"
     destination_port = 0
-    packets_sent     = 0
+    packets_sent = 0
     packets_received = 0
-    min_time         = 999999999
-    max_time         = 0
-    total_time       = 0
-    average_time     = 0
+    min_time = 999999999
+    max_time = 0
+    total_time = 0
+    average_time = 0
 
 #=============================================================================#
+
+
 def calculate_checksum(source_string):
     """
     A port of the functionality of in_cksum() from ping.c
@@ -259,8 +268,8 @@ def calculate_checksum(source_string):
     packed), but this works.
     Network data is big-endian, hosts are typically little-endian
     """
-    countTo = (int(len(source_string)/2))*2
-    sum = 0
+    countTo = (int(len(source_string) / 2)) * 2
+    my_sum = 0
     count = 0
 
     # Handle bytes in pairs (decoding as short ints)
@@ -274,54 +283,57 @@ def calculate_checksum(source_string):
             loByte = source_string[count + 1]
             hiByte = source_string[count]
         try:     # For Python3
-            sum = sum + (hiByte * 256 + loByte)
+            my_sum = my_sum + (hiByte * 256 + loByte)
         except:  # For Python2
-            sum = sum + (ord(hiByte) * 256 + ord(loByte))
+            my_sum = my_sum + (ord(hiByte) * 256 + ord(loByte))
         count += 2
 
     # Handle last byte if applicable (odd-number of bytes)
     # Endianness should be irrelevant in this case
-    if countTo < len(source_string): # Check for odd length
-        loByte = source_string[len(source_string)-1]
+    if countTo < len(source_string):  # Check for odd length
+        loByte = source_string[len(source_string) - 1]
         try:      # For Python3
-            sum += loByte
+            my_sum += loByte
         except:   # For Python2
-            sum += ord(loByte)
+            my_sum += ord(loByte)
 
-    sum &= 0xffffffff # Truncate sum to 32 bits (a variance from ping.c, which
-                      # uses signed ints, but overflow is unlikely in ping)
+    my_sum &= 0xffffffff  # Truncate sum to 32 bits (a variance from ping.c,
+                          # which uses signed ints, but overflow is unlikely
+                          # in ping)
 
-    sum = (sum >> 16) + (sum & 0xffff)    # Add high 16 bits to low 16 bits
-    sum += (sum >> 16)                    # Add carry from above (if any)
-    answer = ~sum & 0xffff                # Invert and truncate to 16 bits
+    my_sum = (my_sum >> 16) + (my_sum & 0xffff)  # Add high 16 and low 16 bits
+    my_sum += (my_sum >> 16)                     # Add carry from above (if any)
+    answer = ~my_sum & 0xffff                    # Invert & truncate to 16 bits
     answer = socket.htons(answer)
 
     return answer
 
 #=============================================================================#
 
+
 class Ping(object):
-    def __init__(self, destination, timeout=3000, packet_size=64, own_id=None, quiet=False, ipv6=False):
+    def __init__(self, destination, timeout=3000, packet_size=64, own_id=None,
+                 quiet=False, ipv6=False):
         self.stats = PingStats
         # Statistics
-        self.stats.destination_ip   = "0.0.0.0"
+        self.stats.destination_ip = "0.0.0.0"
         self.stats.destination_host = destination
         self.stats.destination_port = ICMP_PORT
-        self.stats.packets_sent     = 0
+        self.stats.packets_sent = 0
         self.stats.packets_received = 0
-        self.stats.lost_rate        = 100.0
-        self.stats.min_time         = 999999999
-        self.stats.max_time         = 0
-        self.stats.total_time       = 0
-        self.stats.average_time     = 0.0
-        
+        self.stats.lost_rate = 100.0
+        self.stats.min_time = 999999999
+        self.stats.max_time = 0
+        self.stats.total_time = 0
+        self.stats.average_time = 0.0
+
         # Parameters
-        self.ipv6             = ipv6
-        self.timeout          = timeout
-        self.packet_size      = packet_size - 8
-        self.sequence_number  = 0
-        self.unknown_host     = False
-        
+        self.ipv6 = ipv6
+        self.timeout = timeout
+        self.packet_size = packet_size - 8
+        self.sequence_number = 0
+        self.unknown_host = False
+
         if own_id is None:
             self.own_id = os.getpid() & 0xFFFF
         else:
@@ -343,56 +355,60 @@ class Ping(object):
                 info = socket.getaddrinfo(self.stats.destination_host, None)[0]
                 self.stats.destination_ip = info[4][0]
             else:
-                self.stats.destination_ip = socket.gethostbyname(self.stats.destination_host)
+                self.stats.destination_ip = \
+                            socket.gethostbyname(self.stats.destination_host)
         except socket.error:
             etype, evalue, etb = sys.exc_info()
-            self._stderr.write("\nPYTHON PING: Unknown host: %s (%s)\n" % (self.stats.destination_host, evalue.args[1]))
+            self._stderr.write("\nPYTHON PING: Unknown host: %s (%s)\n" %
+                               (self.stats.destination_host, evalue.args[1]))
             #sys.exit(2)
             self.unknown_host = True
             return
-        
+
         # Print opening line
-        sys.stdout.write("PYTHON PING %s (%s):  %d bytes of data.\n" % (self.stats.destination_host, self.stats.destination_ip, self.packet_size))
+        sys.stdout.write("PYTHON PING %s (%s):  %d bytes of data.\n" %
+                         (self.stats.destination_host,
+                          self.stats.destination_ip,
+                          self.packet_size))
 
 #=============================================================================#
     def do_one(self):
         """
         Returns either the delay (in ms) or None on timeout.
         """
-        delay = None                
-    
+        delay = None
+
         try:
             # One could use UDP here, but it's obscure
             if self.ipv6:
-                current_socket = socket.socket(socket.AF_INET6, socket.SOCK_RAW, socket.getprotobyname("ipv6-icmp"))
+                current_socket = socket.socket(socket.AF_INET6, socket.SOCK_RAW,
+                                           socket.getprotobyname("ipv6-icmp"))
             else:
-                current_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp"))
+                current_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW,
+                                           socket.getprotobyname("icmp"))
         except socket.error:
             etype, evalue, etb = sys.exc_info()
-#            if e.args[0] == 1:
-#                # Operation not permitted - Add more information to traceback
-#                etype, evalue, etb = sys.exc_info()
-#                evalue = etype(
-#                    "%s - Note that ICMP messages can only be send from processes running as root." % evalue
-#                )
-#                raise etype, evalue, etb
-            self._stderr.write("failed. (socket error: '%s')\n" % evalue.args[1])
-            raise # raise the original error
-    
+            evalue = etype("""
+%s - Note that ICMP messages can only be send from processes running as root.
+""" % evalue
+            )
+            raise etype, evalue, etb
+
         send_time = self.send_one_ping(current_socket)
-        if send_time == None:
+        #if send_time == None:
+        if send_time is None:
             current_socket.close()
             return delay
         self.stats.packets_sent += 1
-        
-        receive_time, packet_size, ip_header, icmp_header = self.receive_one_ping(current_socket)
+
+        receive_time, packet_size, ip_header, icmp_header = \
+                                        self.receive_one_ping(current_socket)
         current_socket.close()
 
         icmp_seq_number = icmp_header["seq_number"]
-        icmp_type       = icmp_header["type"]
-        icmp_code       = icmp_header["code"]
-        
-                
+        icmp_type = icmp_header["type"]
+        icmp_code = icmp_header["code"]
+
         if self.ipv6:
             host_addr = self.stats.destination_host
         else:
@@ -404,16 +420,17 @@ class Ping(object):
                 from_info = self.stats.destination_host
             else:
                 from_info = "%s (%s)" % (self.stats.destination_host, host_addr)
-        
+
         if receive_time:
-        
-            iph_src_ip      = ip_header["src_ip"]
-            ip_header_ttl   = ip_header["ttl"]
-                    
-            delay = (receive_time-send_time) * 1000.0
-                
-            self._stdout.write("%d bytes from %s: icmp_seq=%d ttl=%d time=%0.3f ms\n" % (packet_size, from_info, icmp_seq_number, ip_header_ttl, delay))
-            
+            ip_header_ttl = ip_header["ttl"]
+
+            delay = (receive_time - send_time) * 1000.0
+
+            self._stdout.write(
+                "%d bytes from %s: icmp_seq=%d ttl=%d time=%0.3f ms\n" %
+                 (packet_size, from_info, icmp_seq_number,
+                     ip_header_ttl, delay))
+
             self.stats.packets_received += 1
             self.stats.total_time += delay
             if self.stats.min_time > delay:
@@ -423,9 +440,10 @@ class Ping(object):
         else:
             imcp_message = ICMP_CONTROL_MESSAGE[icmp_type][icmp_code]
             delay = None
-            self._stdout.write("From %s: icmp_seq=%d %s\n" % (self.stats.destination_ip, icmp_seq_number, imcp_message))
+            self._stdout.write("From %s: icmp_seq=%d %s\n" %
+                    (self.stats.destination_ip, icmp_seq_number, imcp_message))
             #self._stdout.write("Request timed out.\n")
-    
+
         return delay
 
 #=============================================================================#
@@ -433,66 +451,70 @@ class Ping(object):
         """
         Send one ping to the given >destIP<.
         """
-    
+
         # Header is type (8), code (8), checksum (16), id (16), sequence (16)
         # (numDataBytes - 8) - Remove header size from packet size
         checksum = 0
-    
+
         # Make a dummy heder with a 0 checksum.
         if self.ipv6:
             header = struct.pack(
-                "!BbHHh", ICMP_ECHO_IPV6, 0, checksum, self.own_id, self.sequence_number
+                "!BbHHh", ICMP_ECHO_IPV6, 0, checksum,
+                self.own_id, self.sequence_number
             )
         else:
             header = struct.pack(
-                "!BBHHH", ICMP_ECHO, 0, checksum, self.own_id, self.sequence_number
+                "!BBHHH", ICMP_ECHO, 0, checksum,
+                self.own_id, self.sequence_number
             )
-    
+
         pad_bytes = []
         start_val = 0x42
         # 'cose of the string/byte changes in python 2/3 we have
         # to build the data differnely for different version
         # or it will make packets with unexpected size.
         if sys.version[:1] == '2':
-            bytes = struct.calcsize("d")
-            data = ((self.packet_size) - bytes) * "Q"
+            byte = struct.calcsize("d")
+            data = ((self.packet_size) - byte) * "Q"
             data = struct.pack("d", default_timer()) + data
         else:
             for i in range(start_val, start_val + (self.packet_size)):
                 pad_bytes += [(i & 0xff)]  # Keep chars in the 0-255 range
             #data = bytes(pad_bytes)
             data = bytearray(pad_bytes)
-    
-    
-        
+
         # Calculate the checksum on the data and the dummy header.
-        checksum = calculate_checksum(header + data) # Checksum is in network order
-    
+        # Checksum is in network order
+        checksum = calculate_checksum(header + data)
+
         # Now that we have the right checksum, we put that in. It's just easier
         # to make up a new header than to stuff it into the dummy.
         if self.ipv6:
-            header = struct.pack(
-                "!BbHHh", ICMP_ECHO_IPV6, 0, checksum, self.own_id, self.sequence_number
-            )
+            header = struct.pack("!BbHHh", ICMP_ECHO_IPV6, 0, checksum,
+                                 self.own_id, self.sequence_number
+                                )
         else:
-            header = struct.pack(
-                "!BBHHH", ICMP_ECHO, 0, checksum, self.own_id, self.sequence_number
-            )
-    
+            header = struct.pack("!BBHHH", ICMP_ECHO, 0, checksum,
+                                self.own_id, self.sequence_number
+                                )
+
         packet = header + data
-        
+
         send_time = default_timer()
-    
+
         try:
             if self.ipv6:
-                current_socket.sendto(packet, (self.stats.destination_ip, self.stats.destination_port, 0, 0))
+                current_socket.sendto(packet, (self.stats.destination_ip,
+                                               self.stats.destination_port,
+                                               0, 0))
             else:
-                current_socket.sendto(packet, (self.stats.destination_ip, self.stats.destination_port))
+                current_socket.sendto(packet, (self.stats.destination_ip,
+                                               self.stats.destination_port))
         except socket.error:
             etype, evalue, etb = sys.exc_info()
             self._stderr.write("General failure (%s)\n" % (evalue.args[1]))
             send_time = None
-    
+
         return send_time
 
 #=============================================================================#
@@ -501,21 +523,21 @@ class Ping(object):
         Receive the ping from the socket. Timeout = in ms
         """
         time_left = self.timeout / 1000.0
-    
-        while True: # Loop while waiting for packet or timeout
+
+        while True:  # Loop while waiting for packet or timeout
             select_start = default_timer()
             what_ready = select.select([current_socket], [], [], time_left)
             select_duration = (default_timer() - select_start)
-    
+
             time_received = default_timer()
-    
+
             packet_data, addr = current_socket.recvfrom(ICMP_MAX_RECV)
-    
+
             if self.ipv6:
                 icmp_header_raw = packet_data[0:8]
             else:
                 icmp_header_raw = packet_data[20:28]
-                
+
             icmp_header = self.header2dict(
                 names=[
                     "type", "code", "checksum",
@@ -524,10 +546,10 @@ class Ping(object):
                 struct_format="!BBHHH",
                 data=icmp_header_raw
             )
-            
+
             ip_header = None
             # TODO: Still need to work on IPv6 Headers
-            if icmp_header["packet_id"] == self.own_id: # Our packet
+            if icmp_header["packet_id"] == self.own_id:  # Our packet
                 if self.ipv6:
                     ip_header = self.header2dict(
                         names=[
@@ -542,8 +564,8 @@ class Ping(object):
                         #struct_format="!BBHHBBQQQQ",
                         #data=packet_data[:40]
                     )
-                    #ip_header['src_ip'] = ip_header['src_ip_a'] + ip_header['src_ip_b']
-                    #ip_header['dest_ip'] = ip_header['dest_ip_a'] + ip_header['dest_ip_b']
+#ip_header['src_ip'] = ip_header['src_ip_a'] + ip_header['src_ip_b']
+#ip_header['dest_ip'] = ip_header['dest_ip_a'] + ip_header['dest_ip_b']
                 else:
                     ip_header = self.header2dict(
                         names=[
@@ -555,55 +577,64 @@ class Ping(object):
                         data=packet_data[:20]
                     )
 
-            if what_ready[0] == []: # Timeout
+            if what_ready[0] == []:  # Timeout
                 return None, 0, ip_header, icmp_header
 
-            if icmp_header["packet_id"] == self.own_id: # Our packet
+            if icmp_header["packet_id"] == self.own_id:  # Our packet
                 data_size = len(packet_data) - 28
-                return time_received, (data_size+8), ip_header, icmp_header
-    
+                return time_received, (data_size + 8), ip_header, icmp_header
+
             time_left = time_left - select_duration
             if time_left <= 0:
                 return None, 0, ip_header, icmp_header
 
 #=============================================================================#
-    
+
     def calculate_packet_loss(self):
         if self.stats.packets_sent:
             lost_count = self.stats.packets_sent - self.stats.packets_received
-            self.stats.lost_rate = float(lost_count) / self.stats.packets_sent * 100.0
+            self.stats.lost_rate = \
+                        float(lost_count) / self.stats.packets_sent * 100.0
         else:
             self.stats.lost_rate = 100.0
-            
+
     def calculate_packet_average(self):
         if self.stats.packets_received:
-            self.stats.average_time = self.stats.total_time / self.stats.packets_received
+            self.stats.average_time = \
+                        self.stats.total_time / self.stats.packets_received
         else:
             self.stats.average_time = 0.0
-            
+
 #=============================================================================#
-    
+
     def print_stats(self):
-        sys.stdout.write("\n--- %s PYTHON PING statistics ---\n" % (self.stats.destination_host))
+        sys.stdout.write("\n--- %s PYTHON PING statistics ---\n" %
+                                                (self.stats.destination_host))
 
         self.calculate_packet_loss()
 
-        sys.stdout.write("%d packets transmitted, %d received, %0.1f%% packet loss, time %dms\n" % (
-            self.stats.packets_sent, self.stats.packets_received, self.stats.lost_rate, self.stats.total_time
+        sys.stdout.write(
+"%d packets transmitted, %d received, %0.1f%% packet loss, time %dms\n" % (
+            self.stats.packets_sent, self.stats.packets_received,
+            self.stats.lost_rate, self.stats.total_time
         ))
 
         if self.stats.packets_received > 0:
             self.calculate_packet_average()
-            sys.stdout.write("round-trip (ms)  min/avg/max = %0.3f/%0.3f/%0.3f\n" % (
-                self.stats.min_time, self.stats.average_time, self.stats.max_time))
-    
+            sys.stdout.write(
+                "round-trip (ms)  min/avg/max = %0.3f/%0.3f/%0.3f\n" % (
+                    self.stats.min_time, self.stats.average_time,
+                    self.stats.max_time))
+
 #=============================================================================#
 
     def header2dict(self, names, struct_format, data):
-        """ unpack the raw received IP and ICMP header informations to a dict """
+        """
+        unpack the raw received IP and ICMP header informations to a dict
+        """
         unpacked_data = struct.unpack(struct_format, data)
-        return dict(zip(names, unpacked_data))
-    
+        return dict(list(zip(names, unpacked_data)))
+
 #=============================================================================#
 
     def signal_handler(self, signum, frame):
@@ -618,7 +649,7 @@ class Ping(object):
     def setup_signal_handler(self):
         signal.signal(signal.SIGINT, self.signal_handler)   # Handle Ctrl-C
         if hasattr(signal, "SIGBREAK"):
-            # Handle Ctrl-Break e.g. under Windows 
+            # Handle Ctrl-Break e.g. under Windows
             signal.signal(signal.SIGBREAK, self.signal_handler)
 
 #=============================================================================#
@@ -632,7 +663,7 @@ class Ping(object):
         while True:
             if self.unknown_host:
                 return self.stats
-                
+
             delay = self.do_one()
 
             self.sequence_number += 1
@@ -641,34 +672,39 @@ class Ping(object):
             if deadline and self.stats.total_time >= deadline:
                 break
 
-            if delay == None:
+            #if delay == None:
+            if delay is None:
                 delay = 0
 
             # Pause for the remainder of the MAX_SLEEP period (if applicable)
             if (MAX_SLEEP > delay):
                 time.sleep((MAX_SLEEP - delay) / 1000.0)
 
-
         self.calculate_packet_loss()
         self.print_stats()
         return self.stats
-    
+
 #=============================================================================#
-    
-def ping(hostname, count=3, timeout=3000, packet_size=64, own_id=None, quiet=False, ipv6=False):
+
+
+def ping(hostname, count=3, timeout=3000, packet_size=64, own_id=None,
+         quiet=False, ipv6=False):
     p = Ping(hostname, timeout, packet_size, own_id, quiet, ipv6)
     stats = p.run(count)
     return(not stats.packets_received)
-    
+
 #=============================================================================#
+
 
 def usage():
     usage_message = """\
 Usage: %s hostname
 """ % (sys.argv[0])
     sys.stderr.write(usage_message)
-    
+
 #=============================================================================#
+
+
 def run_tests():
     # These should work:
     ping("8.8.8.8")
@@ -687,47 +723,74 @@ def run_tests():
 
     # Should fails with 'The requested address is not valid in its context':
     ping("0.0.0.0")
-    
-    
+
+
 #=============================================================================#
+
+
 def main(arguments):
-    
+
     # There is some duplication in trying to not break for older versions.
     # OptionParser is still present in current versions, but it is deprecated,
     # in favor of argparse.
     try:
         import argparse
 
-        parser = argparse.ArgumentParser(description='Send ICMP ECHO_REQUEST to network hosts')
-        parser.add_argument('destination', type=str, help='destination')
-        parser.add_argument('--test', action="store_true", help='Run a basic test suite')
-        parser.add_argument('-q', '--quiet', action="store_true", help='Quiet output.  Nothing is displayed except the summary lines at startup time and when finished.')
-        parser.add_argument('--ipv6', action="store_true", help='Run using IPv6, instead of the default (IPv4)')
-        parser.add_argument('-c', dest='count', metavar='count', type=int, default=3, help='Stop after sending count ECHO_REQUEST packets.')
-        parser.add_argument('-s', dest='packetsize', metavar='packetsize', type=int, default=64, help='Specifies the number of data bytes to be sent.  The default is 56, which translates into 64 ICMP data bytes when combined with the 8 bytes of ICMP header data.')
-        parser.add_argument('-W', dest='timeout', metavar='timeout', type=int, default=3, help='Time to wait for a response, in seconds.')
-        
+        parser = argparse.ArgumentParser(
+            description='Send ICMP ECHO_REQUEST to network hosts')
+        parser.add_argument('destination', type=str,
+            help='destination')
+        parser.add_argument('--test', action="store_true",
+            help='Run a basic test suite')
+        parser.add_argument('-q', '--quiet', action="store_true",
+            help='Quiet output.  Nothing is displayed except the summary lines '
+                 'at startup time and when finished.')
+        parser.add_argument('--ipv6', action="store_true",
+            help='Run using IPv6, instead of the default (IPv4)')
+        parser.add_argument('-c', dest='count', metavar='count', type=int,
+            default=3, help='Stop after sending count ECHO_REQUEST packets.')
+        parser.add_argument('-s', dest='packetsize', metavar='packetsize',
+            type=int, default=64,
+            help='Specifies the number of data bytes to be sent.  The default '
+                 'is 56, which translates into 64 ICMP data bytes when'
+                 'combined with the 8 bytes of ICMP header data.')
+        parser.add_argument('-W', dest='timeout', metavar='timeout', type=int,
+            default=3,
+            help='Time to wait for a response, in seconds.')
+
         args = parser.parse_args()
     except ImportError:
         from optparse import OptionParser
-        
-        parser = OptionParser(description='Send ICMP ECHO_REQUEST to network hosts')
-        parser.add_option('--test', action="store_true", help='Run a basic test suite')
-        parser.add_option('-q', '--quiet', action="store_true", help='Quiet output.  Nothing is displayed except the summary lines at startup time and when finished.')
-        parser.add_option('--ipv6', action="store_true", help='Run using IPv6, instead of the default (IPv4)')
-        parser.add_option('-c', dest='count', metavar='count', type=int, default=3, help='Stop after sending count ECHO_REQUEST packets.')
-        parser.add_option('-s', dest='packetsize', metavar='packetsize', type=int, default=64, help='Specifies the number of data bytes to be sent.  The default is 56, which translates into 64 ICMP data bytes when combined with the 8 bytes of ICMP header data.')
-        parser.add_option('-W', dest='timeout', metavar='timeout', type=int, default=3, help='Time to wait for a response, in seconds.')
-        
+
+        parser = OptionParser(
+            description='Send ICMP ECHO_REQUEST to network hosts')
+        parser.add_option('--test', action="store_true",
+            help='Run a basic test suite')
+        parser.add_option('-q', '--quiet', action="store_true",
+            help='Quiet output.  Nothing is displayed except the summary lines '
+                 'at startup time and when finished.')
+        parser.add_option('--ipv6', action="store_true",
+            help='Run using IPv6, instead of the default (IPv4)')
+        parser.add_option('-c', dest='count', metavar='count', type=int,
+            default=3, help='Stop after sending count ECHO_REQUEST packets.')
+        parser.add_option('-s', dest='packetsize', metavar='packetsize',
+            type=int, default=64,
+            help='Specifies the number of data bytes to be sent.  The default '
+                 'is 56, which translates into 64 ICMP data bytes when '
+                 'combined with the 8 bytes of ICMP header data.')
+        parser.add_option('-W', dest='timeout', metavar='timeout', type=int,
+            default=3,
+            help='Time to wait for a response, in seconds.')
+
         (args, positional_args) = parser.parse_args()
-        
-        # Add the destination to this object to match argparse.parse_args() output
+
+        # Add destination to this object to match argparse.parse_args() output
         args.destination = positional_args[0]
 
     if args.test:
         run_tests()
         sys.exit(1)
-        
+
     retval = ping(hostname=args.destination,
                   count=args.count,
                   timeout=args.timeout,
@@ -738,7 +801,7 @@ def main(arguments):
                   )
     sys.exit(retval)
 
-    
+
 #=============================================================================#
 if __name__ == '__main__':
     main(sys.argv)
