@@ -390,11 +390,10 @@ class Ping(object):
                                            socket.getprotobyname("icmp"))
         except socket.error:
             etype, evalue, etb = sys.exc_info()
-            evalue = etype("""
-%s - Note that ICMP messages can only be send from processes running as root.
-""" % evalue
-            )
-            raise etype, evalue, etb
+            self._stderr.write("socket.error: %s\n" % evalue)
+            self._stderr.write("Note that ICMP messages can only be send "
+                               "from processes running as root.\n")
+            sys.exit(3)
 
         send_time = self.send_one_ping(current_socket)
         #if send_time == None:
