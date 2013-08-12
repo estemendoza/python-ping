@@ -378,16 +378,17 @@ class Ping(object):
         """
         delay = None
 
+        # One could use UDP here, but it's obscure
+        if self.ipv6:
+            sock_af = socket.AF_INET6
+            sock_type = socket.SOCK_RAW
+            sock_protocol = socket.getprotobyname("ipv6-icmp")
+        else:
+            sock_af = socket.AF_INET
+            sock_type = socket.SOCK_RAW
+            sock_protocol = socket.getprotobyname("icmp")
         try:
-            # One could use UDP here, but it's obscure
-            if self.ipv6:
-                current_socket = socket.socket(socket.AF_INET6,
-                                           socket.SOCK_RAW,
-                                           socket.getprotobyname("ipv6-icmp"))
-            else:
-                current_socket = socket.socket(socket.AF_INET,
-                                           socket.SOCK_RAW,
-                                           socket.getprotobyname("icmp"))
+            current_socket = socket.socket(sock_af, sock_type, sock_protocol)
         except socket.error:
             etype, evalue, etb = sys.exc_info()
             self._stderr.write("socket.error: %s\n" % evalue)
@@ -414,6 +415,7 @@ class Ping(object):
             host_addr = self.stats.destination_host
         else:
             host_addr = self.stats.destination_ip
+
         if host_addr == self.stats.destination_host:
             from_info = host_addr
         else:
@@ -699,9 +701,7 @@ def ping(hostname, count=3, timeout=3000, packet_size=64, own_id=None,
 
 
 def usage():
-    usage_message = """\
-Usage: %s hostname
-""" % (sys.argv[0])
+    usage_message = "Usage: %s hostname" % (sys.argv[0])
     sys.stderr.write(usage_message)
 
 #=============================================================================#
@@ -740,7 +740,7 @@ def main(arguments):
 
         parser = argparse.ArgumentParser(
             description='Send ICMP ECHO_REQUEST to network hosts')
-        parser.add_argument('destination', type=str,
+        parser.add_argument('destination', type=str, nargs='?',
             help='destination')
         parser.add_argument('--test', action="store_true",
             help='Run a basic test suite')
@@ -787,10 +787,17 @@ def main(arguments):
         (args, positional_args) = parser.parse_args()
 
         # Add destination to this object to match argparse.parse_args() output
-        args.destination = positional_args[0]
+        if positional_args:
+            args.destination = positional_args[0]
+        else:
+            args.destination = False
 
     if args.test:
         run_tests()
+        sys.exit(1)
+
+    if not args.destination:
+        parser.print_help()
         sys.exit(1)
 
     retval = ping(hostname=args.destination,
