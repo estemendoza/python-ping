@@ -86,8 +86,10 @@ stats = p.run(1)  # PingStats
 
 == TODOs ==
 
-* Refactor ping.py
+* Fix unit tests
+* Improve documentation
 * Improve CLI interface
+* Refactor ping.py
 * Add a "suprocess ping", with output parser
 
 
