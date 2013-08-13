@@ -313,7 +313,7 @@ def calculate_checksum(source_string):
 
 class Ping(object):
     def __init__(self, destination, timeout=3000, packet_size=64, own_id=None,
-                 quiet=False, ipv6=False):
+                 quiet=False, silent=False, ipv6=False):
         self.stats = PingStats
         # Statistics
         self.stats.destination_ip = "0.0.0.0"
@@ -340,6 +340,11 @@ class Ping(object):
             self.own_id = own_id
 
         # Output Streams
+        if silent:
+            devnull = open(os.devnull, 'w')
+            sys.stdout = devnull
+            sys.stderr = devnull
+
         if quiet:
             devnull = open(os.devnull, 'w')
             self._stdout = devnull
@@ -695,8 +700,8 @@ class Ping(object):
 
 
 def ping(hostname, count=3, timeout=3000, packet_size=64, own_id=None,
-         quiet=False, ipv6=False):
-    p = Ping(hostname, timeout, packet_size, own_id, quiet, ipv6)
+         quiet=False, silent=False, ipv6=False):
+    p = Ping(hostname, timeout, packet_size, own_id, quiet, silent, ipv6)
     stats = p.run(count)
     return(not stats.packets_received)
 
