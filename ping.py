@@ -209,7 +209,7 @@ import struct
 import select
 import time
 import signal
-from icmp_messages import *
+from icmp_messages import ICMP_CONTROL_MESSAGE, ICMPv6_CONTROL_MESSAGE
 
 if sys.platform == "win32":
     # On Windows, the best timer is time.clock()
@@ -442,7 +442,10 @@ class Ping(object):
             if self.stats.max_time < delay:
                 self.stats.max_time = delay
         else:
-            imcp_message = ICMP_CONTROL_MESSAGE[icmp_type][icmp_code]
+            if self.ipv6:
+                imcp_message = ICMPv6_CONTROL_MESSAGE[icmp_type][icmp_code]
+            else:
+                imcp_message = ICMP_CONTROL_MESSAGE[icmp_type][icmp_code]
             delay = None
             self._stdout.write("From %s: icmp_seq=%d %s\n" %
                     (self.stats.destination_ip, icmp_seq_number, imcp_message))
