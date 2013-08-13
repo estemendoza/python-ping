@@ -209,7 +209,7 @@ import struct
 import select
 import time
 import signal
-from icmp_messages import ICMP_CONTROL_MESSAGE, ICMPv6_CONTROL_MESSAGE
+from .icmp_messages import ICMP_CONTROL_MESSAGE, ICMPv6_CONTROL_MESSAGE
 
 if sys.platform == "win32":
     # On Windows, the best timer is time.clock()
