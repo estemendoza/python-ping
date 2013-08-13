@@ -9,8 +9,7 @@ Original Version from [[ftp://ftp.visi.com/users/mdc/ping.py|Matthew Dixon Cowle
 * license: GNU GPL v2, see [[https://github.com/pferate/python-ping/blob/master/LICENSE|LICENSE]] for more details.
 
 
-=== usage ===
-
+=== CLI Usage ===
 {{{
 ~/python-ping$ sudo ./ping.py
 usage: ping.py [-h] [--test] [-q] [--ipv6] [-c count] [-s packetsize]
@@ -58,6 +57,30 @@ PYTHON PING 8.8.8.8 (8.8.8.8):  56 bytes of data.
 --- 8.8.8.8 PYTHON PING statistics ---
 3 packets transmitted, 3 received, 0.0% packet loss, time 69ms
 round-trip (ms)  min/avg/max = 17.155/23.256/32.250
+}}}
+
+=== Module Usage ===
+{{{
+#!/usr/bin/env python
+
+from python_ping import ping
+
+# host = Host you want to ping
+p = ping.Ping(host, timeout=3000, quiet=True, silent=True, ipv6=False)
+stats = p.run(1)  # PingStats
+
+# class PingStats:
+#     destination_ip
+#     destination_host
+#     destination_port
+#     packets_sent
+#     packets_received
+#     lost_rate
+#     min_time
+#     max_time
+#     total_time
+#     average_time
+
 }}}
 
 
