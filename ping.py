@@ -209,7 +209,7 @@ import struct
 import select
 import time
 import signal
-from .icmp_messages import ICMP_CONTROL_MESSAGE, ICMPv6_CONTROL_MESSAGE
+from icmp_messages import ICMP_CONTROL_MESSAGE, ICMPv6_CONTROL_MESSAGE
 
 if sys.platform == "win32":
     # On Windows, the best timer is time.clock()
@@ -807,6 +807,8 @@ def main(arguments):
     if not args.destination:
         parser.print_help()
         sys.exit(1)
+
+    args.timeout = args.timeout * 1000  # Convert timeout from sec to ms
 
     retval = ping(hostname=args.destination,
                   count=args.count,
