@@ -762,7 +762,7 @@ def main(arguments):
         parser.add_argument('-s', dest='packetsize', metavar='packetsize',
             type=int, default=64,
             help='Specifies the number of data bytes to be sent.  The default '
-                 'is 56, which translates into 64 ICMP data bytes when'
+                 'is 56, which translates into 64 ICMP data bytes when '
                  'combined with the 8 bytes of ICMP header data.')
         parser.add_argument('-W', dest='timeout', metavar='timeout', type=int,
             default=3,
