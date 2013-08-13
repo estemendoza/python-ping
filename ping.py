@@ -334,17 +334,14 @@ class Ping(object):
         self.sequence_number = 0
         self.unknown_host = False
 
+        self.silent = silent
+
         if own_id is None:
             self.own_id = os.getpid() & 0xFFFF
         else:
             self.own_id = own_id
 
         # Output Streams
-        if silent:
-            devnull = open(os.devnull, 'w')
-            sys.stdout = devnull
-            sys.stderr = devnull
-
         if quiet:
             devnull = open(os.devnull, 'w')
             self._stdout = devnull
@@ -371,10 +368,11 @@ class Ping(object):
             return
 
         # Print opening line
-        sys.stdout.write("PYTHON PING %s (%s):  %d bytes of data.\n" %
-                         (self.stats.destination_host,
-                          self.stats.destination_ip,
-                          self.packet_size))
+        if not self.silent:
+            sys.stdout.write("PYTHON PING %s (%s):  %d bytes of data.\n" %
+                             (self.stats.destination_host,
+                              self.stats.destination_ip,
+                              self.packet_size))
 
 #=============================================================================#
     def do_one(self):
@@ -620,6 +618,8 @@ class Ping(object):
 #=============================================================================#
 
     def print_stats(self):
+        if self.silent:
+            return
         sys.stdout.write("\n--- %s PYTHON PING statistics ---\n" %
                                                 (self.stats.destination_host))
 
