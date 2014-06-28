@@ -6,7 +6,7 @@
     ~~~~~~~~~~~~~~~
 
     :homepage: https://github.com/jedie/python-ping/
-    :copyleft: 1989-2011 by the python-ping team, see AUTHORS for more details.
+    :copyleft: 1989-2014 by the python-ping team, see AUTHORS for more details.
     :license: GNU GPL v2, see LICENSE for more details.
 """
 

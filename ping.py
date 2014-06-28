@@ -41,8 +41,26 @@
     Bug fix by Andrejs Rozitis:
       -> http://github.com/rozitis/python-ping/
 
+    Bug fix by  Auke Willem Oosterhoff
+
     Revision history
     ~~~~~~~~~~~~~~~~
+
+    June 28, 2014
+    -------------
+    * A bit closer to what PIP8 wants
+
+    * Litlle modifications by Auke Willem Oosterhoff:
+     - Added support for simultaneous pings on multiple hosts.
+     https://bitbucket.org/OrangeTux/python-ping/commits/d4aa720662995a57cf18fa6b8ea689e9d11d26c7/raw/
+
+    * Faster and cleaner checksum creation
+      Based on frfra's patch
+      https://github.com/alexlouden/python-ping/commit/b9fc3acb2c36ccc895d1f7ba7336b951dc033ce9
+
+    * Changing 'except' calls to work with 2.x and 3.x
+      Based on pferate's patch
+      https://github.com/pferate/python_ping/commit/4e761ea99582ac1699c7965d149ce16e6b62f0ac
 
     June 19, 2013
     --------------
@@ -202,7 +220,18 @@
 """
 
 #=============================================================================#
-import os, sys, socket, struct, select, time, signal
+import os
+import sys
+import time
+import array
+import socket
+import struct
+import select
+import signal
+try:
+    from _thread import get_ident
+except ImportError:
+    def get_ident(): return 0
 
 if sys.platform == "win32":
     # On Windows, the best timer is time.clock()
@@ -214,21 +243,21 @@ else:
 #=============================================================================#
 # ICMP parameters
 
-ICMP_ECHOREPLY        =    0 # Echo reply (per RFC792)
-ICMP_ECHO             =    8 # Echo request (per RFC792)
-ICMP_ECHO_IPV6        =  128 # Echo request (per RFC4443)
-ICMP_ECHO_IPV6_REPLY  =  129 # Echo request (per RFC4443)
-ICMP_MAX_RECV         = 2048 # Max size of incoming buffer
+ICMP_ECHOREPLY = 0		# Echo reply (per RFC792)
+ICMP_ECHO = 8			# Echo request (per RFC792)
+ICMP_ECHO_IPV6 = 128		# Echo request (per RFC4443)
+ICMP_ECHO_IPV6_REPLY = 129	# Echo request (per RFC4443)
+ICMP_MAX_RECV = 2048		# Max size of incoming buffer
 
 MAX_SLEEP = 1000
 
 class MyStats:
-    thisIP   = "0.0.0.0"
+    thisIP = "0.0.0.0"
     pktsSent = 0
     pktsRcvd = 0
-    minTime  = 999999999
-    maxTime  = 0
-    totTime  = 0
+    minTime = 999999999
+    maxTime = 0
+    totTime = 0
     avrgTime = 0
     fracLoss = 1.0
 
@@ -242,41 +271,19 @@ def checksum(source_string):
     packed), but this works.
     Network data is big-endian, hosts are typically little-endian
     """
-    countTo = (int(len(source_string)/2))*2
-    sum = 0
-    count = 0
+    if (len(source_string) % 2):
+        source_string += "\x00"
+    converted = array.array("H", source_string)
+    if sys.byteorder == "big":
+        converted.bytewap()
+    val = sum(converted)
 
-    # Handle bytes in pairs (decoding as short ints)
-    loByte = 0
-    hiByte = 0
-    while count < countTo:
-        if (sys.byteorder == "little"):
-            loByte = source_string[count]
-            hiByte = source_string[count + 1]
-        else:
-            loByte = source_string[count + 1]
-            hiByte = source_string[count]
-        try:     # For Python3
-            sum = sum + (hiByte * 256 + loByte)
-        except:  # For Python2
-            sum = sum + (ord(hiByte) * 256 + ord(loByte))
-        count += 2
-
-    # Handle last byte if applicable (odd-number of bytes)
-    # Endianness should be irrelevant in this case
-    if countTo < len(source_string): # Check for odd length
-        loByte = source_string[len(source_string)-1]
-        try:      # For Python3
-            sum += loByte
-        except:   # For Python2
-            sum += ord(loByte)
-
-    sum &= 0xffffffff # Truncate sum to 32 bits (a variance from ping.c, which
+    val &= 0xffffffff # Truncate val to 32 bits (a variance from ping.c, which
                       # uses signed ints, but overflow is unlikely in ping)
 
-    sum = (sum >> 16) + (sum & 0xffff)    # Add high 16 bits to low 16 bits
-    sum += (sum >> 16)                    # Add carry from above (if any)
-    answer = ~sum & 0xffff                # Invert and truncate to 16 bits
+    val = (val >> 16) + (val & 0xffff)    # Add high 16 bits to low 16 bits
+    val += (val >> 16)                    # Add carry from above (if any)
+    answer = ~val & 0xffff                # Invert and truncate to 16 bits
     answer = socket.htons(answer)
 
     return answer
@@ -291,18 +298,25 @@ def do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes, quiet 
     if ipv6:
         try: # One could use UDP here, but it's obscure
             mySocket = socket.socket(socket.AF_INET6, socket.SOCK_RAW, socket.getprotobyname("ipv6-icmp"))
-        except socket.error, e:
-            print("failed. (socket error: '%s')" % e.args[1])
+        except socket.error:
+            etype, evalue, etb = sys.exc_info()
+            print("failed. (socket error: '%s')" % evalue.args[1])
+            print('Note that python-ping uses RAW sockets'
+                    'and requiers root rights.')
             raise # raise the original error
     else:
 
         try: # One could use UDP here, but it's obscure
             mySocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp"))
-        except socket.error, e:
-            print("failed. (socket error: '%s')" % e.args[1])
+        except socket.error:
+            etype, evalue, etb = sys.exc_info()
+            print("failed. (socket error: '%s')" % evalue.args[1])
+            print('Note that python-ping uses RAW sockets'
+                    'and requiers root rights.')
             raise # raise the original error
 
-    my_ID = os.getpid() & 0xFFFF
+    #my_ID = os.getpid() & 0xFFFF
+    my_ID = (os.getpid() ^ get_ident()) & 0xFFFF
 
     sentTime = send_one_ping(mySocket, destIP, my_ID, mySeqNumber, numDataBytes, ipv6)
     if sentTime == None:
@@ -369,7 +383,7 @@ def send_one_ping(mySocket, destIP, myID, mySeqNumber, numDataBytes, ipv6=False)
         data = ((numDataBytes - 8) - bytes) * "Q"
         data = struct.pack("d", default_timer()) + data
     else:
-        for i in range(startVal, startVal + (numDataBytes-8)):
+        for i in range(startVal, startVal + (numDataBytes - 8)):
             padBytes += [(i & 0xff)]  # Keep chars in the 0-255 range
         #data = bytes(padBytes)
         data = bytearray(padBytes)
@@ -395,14 +409,15 @@ def send_one_ping(mySocket, destIP, myID, mySeqNumber, numDataBytes, ipv6=False)
 
     try:
         mySocket.sendto(packet, (destIP, 1)) # Port number is irrelevant for ICMP
-    except socket.error, e:
-        print("General failure (%s)" % (e.args[1]))
+    except socket.error:
+        etype, evalue, etb = sys.exc_info()
+        print("General failure (%s)" % (evalue.args[1]))
         return
 
     return sendTime
 
 #=============================================================================#
-def receive_one_ping(mySocket, myID, timeout, ipv6=False):
+def receive_one_ping(mySocket, myID, timeout, ipv6 = False):
     """
     Receive the ping from the socket. Timeout = in ms
     """
@@ -439,7 +454,7 @@ def receive_one_ping(mySocket, myID, timeout, ipv6=False):
         if icmpPacketID == myID: # Our packet
             dataSize = len(recPacket) - 28
             #print (len(recPacket.encode()))
-            return timeReceived, (dataSize+8), iphSrcIP, icmpSeqNumber, iphTTL
+            return timeReceived, (dataSize + 8), iphSrcIP, icmpSeqNumber, iphTTL
 
         timeLeft = timeLeft - howLongInSelect
         if timeLeft <= 0:
@@ -499,16 +514,18 @@ def verbose_ping(hostname, timeout = 3000, count = 3,
         else:
             destIP = socket.gethostbyname(hostname)
         print("\nPYTHON PING %s (%s): %d data bytes" % (hostname, destIP, numDataBytes))
-    except socket.gaierror, e:
-        print("\nPYTHON PING: Unknown host: %s (%s)" % (hostname, e.args[1]))
+    except socket.gaierror:
+        etype, evalue, etb = sys.exc_info()
+        print("\nPYTHON PING: Unknown host: %s (%s)" % (hostname, evalue.args[1]))
         print()
         return
 
     myStats.thisIP = destIP
 
     for i in range(count):
-        delay = do_one(myStats, destIP, hostname, timeout, mySeqNumber, numDataBytes, ipv6=ipv6)
-        if delay == None:
+        delay = do_one(myStats, destIP, hostname, timeout,
+                         mySeqNumber, numDataBytes, ipv6=ipv6)
+        if delay is None:
             delay = 0
 
         mySeqNumber += 1
@@ -524,7 +541,7 @@ def verbose_ping(hostname, timeout = 3000, count = 3,
 
 #=============================================================================#
 def quiet_ping(hostname, timeout = 3000, count = 3,
-                     numDataBytes = 64, path_finder = False, ipv6=False):
+                     numDataBytes = 64, path_finder = False, ipv6 = False):
     """
     Same as verbose_ping, but the results are returned as tuple
     """
@@ -537,7 +554,7 @@ def quiet_ping(hostname, timeout = 3000, count = 3,
             destIP = info[4][0]
         else:
             destIP = socket.gethostbyname(hostname)
-    except socket.gaierror, e:
+    except socket.gaierror:
         return False
 
     myStats.thisIP = destIP
@@ -555,17 +572,17 @@ def quiet_ping(hostname, timeout = 3000, count = 3,
         delay = do_one(myStats, destIP, hostname, timeout,
                         mySeqNumber, numDataBytes, quiet=True, ipv6=ipv6)
 
-        if delay == None:
+        if delay is None:
             delay = 0
 
         mySeqNumber += 1
 
         # Pause for the remainder of the MAX_SLEEP period (if applicable)
         if (MAX_SLEEP > delay):
-            time.sleep((MAX_SLEEP - delay)/1000)
+            time.sleep((MAX_SLEEP - delay) / 1000)
 
     if myStats.pktsSent > 0:
-        myStats.fracLoss = (myStats.pktsSent - myStats.pktsRcvd)/myStats.pktsSent
+        myStats.fracLoss = (myStats.pktsSent - myStats.pktsRcvd) / myStats.pktsSent
     if myStats.pktsRcvd > 0:
         myStats.avrgTime = myStats.totTime / myStats.pktsRcvd
 
@@ -598,4 +615,4 @@ if __name__ == '__main__':
         retval = verbose_ping(sys.argv[1])
         sys.exit(retval)
     else:
-        print "Error: call ./ping.py hostname"
+        print("Error: call ./ping.py hostname")
