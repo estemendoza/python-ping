@@ -5,39 +5,137 @@ Note that ICMP messages can only be sent from processes running as root
 
 Original Version from [[ftp://ftp.visi.com/users/mdc/ping.py|Matthew Dixon Cowles]]
   
-* copyleft 1989-2011 by the python-ping team, see [[https://github.com/jedie/python-ping/blob/master/AUTHORS|AUTHORS]] for more details.
-* license: GNU GPL v2, see [[https://github.com/jedie/python-ping/blob/master/LICENSE|LICENSE]] for more details.
+* copyleft 1989-2013 by the python-ping team, see [[https://github.com/pferate/python-ping/blob/master/AUTHORS|AUTHORS]] for more details.
+* license: GNU GPL v2, see [[https://github.com/pferate/python-ping/blob/master/LICENSE|LICENSE]] for more details.
 
 
-=== usage ===
+=== CLI Usage ===
+{{{
+~/python-ping$ sudo ./ping.py
+usage: ping.py [-h] [--test] [-q] [--ipv6] [-c count] [-s packetsize]
+               [-W timeout]
+               [destination]
+
+Send ICMP ECHO_REQUEST to network hosts
+
+positional arguments:
+  destination    destination
+
+optional arguments:
+  -h, --help     show this help message and exit
+  --test         Run a basic test suite
+  -q, --quiet    Quiet output. Nothing is displayed except the summary lines
+                 at startup time and when finished.
+  --ipv6         Run using IPv6, instead of the default (IPv4)
+  -c count       Stop after sending count ECHO_REQUEST packets.
+  -s packetsize  Specifies the number of data bytes to be sent. The default is
+                 56, which translates into 64 ICMP data bytes when combined
+                 with the 8 bytes of ICMP header data.
+  -W timeout     Time to wait for a response, in seconds.
+
+}}}
 
 {{{
 ~/python-ping$ sudo ./ping.py google.com
+PYTHON PING google.com (173.194.33.34):  56 bytes of data.
+64 bytes from google.com (173.194.33.34): icmp_seq=0 ttl=57 time=11.353 ms
+64 bytes from google.com (173.194.33.34): icmp_seq=1 ttl=57 time=11.085 ms
+64 bytes from google.com (173.194.33.34): icmp_seq=2 ttl=57 time=10.786 ms
 
-PYTHON-PING google.com (209.85.148.99): 55 data bytes
-64 bytes from google.com (209.85.148.99): icmp_seq=0 ttl=54 time=56.2 ms
-64 bytes from google.com (209.85.148.99): icmp_seq=1 ttl=54 time=55.7 ms
-64 bytes from google.com (209.85.148.99): icmp_seq=2 ttl=54 time=55.5 ms
+--- google.com PYTHON PING statistics ---
+3 packets transmitted, 3 received, 0.0% packet loss, time 33ms
+round-trip (ms)  min/avg/max = 10.786/11.075/11.353
+}}}
 
-----google.com PYTHON PING Statistics----
-3 packets transmitted, 3 packets received, 0.0% packet loss
-round-trip (ms)  min/avg/max = 55.468/55.795/56.232
+{{{
+~/python-ping$ sudo ./ping.py 8.8.8.8
+PYTHON PING 8.8.8.8 (8.8.8.8):  56 bytes of data.
+64 bytes from 8.8.8.8: icmp_seq=0 ttl=49 time=20.363 ms
+64 bytes from 8.8.8.8: icmp_seq=1 ttl=49 time=17.155 ms
+64 bytes from 8.8.8.8: icmp_seq=2 ttl=49 time=32.250 ms
+
+--- 8.8.8.8 PYTHON PING statistics ---
+3 packets transmitted, 3 received, 0.0% packet loss, time 69ms
+round-trip (ms)  min/avg/max = 17.155/23.256/32.250
+}}}
+
+=== Module Usage ===
+{{{
+#!/usr/bin/env python
+
+from python_ping import ping
+
+# host = Host you want to ping
+p = ping.Ping(host, timeout=3000, quiet=True, silent=True, ipv6=False)
+stats = p.run(1)  # PingStats
+
+# class PingStats:
+#     destination_ip
+#     destination_host
+#     destination_port
+#     packets_sent
+#     packets_received
+#     lost_rate
+#     min_time
+#     max_time
+#     total_time
+#     average_time
+
 }}}
 
 
 == TODOs ==
 
-* refactor ping.py
-* create a CLI interface
-* add a "suprocess ping", with output parser
+* Fix unit tests
+* Improve documentation
+* Improve CLI interface
+* Refactor ping.py
+* Add a "suprocess ping", with output parser
 
 
 == contribute ==
 
-[[http://help.github.com/fork-a-repo/|Fork this repo]] on [[https://github.com/jedie/python-ping/|GitHub]] and [[http://help.github.com/send-pull-requests/|send pull requests]]. Thank you.
+[[http://help.github.com/fork-a-repo/|Fork this repo]] on [[https://github.com/pferate/python-ping/|GitHub]] and [[http://help.github.com/send-pull-requests/|send pull requests]]. Thank you.
 
 
 == Revision history ==
+==== Aug. 13, 2013 ====
+* Adding 'silent' option when running as imported module.  'quiet' prints just the summary, 'silent' suppresses all outputs.  [pferate]
+
+==== Aug. 09, 2013 ====
+* Now pep8 compliant [pferate]
+
+==== Jul. 16, 2013 ====
+* Refactored codebase back to a class, retaining all other updates. [pferate]
+* Added a better CLI (still more to add, but currently has more options available) [pferate]
+
+==== Jul. 09, 2013 ====
+* Added exit code [pferate]
+
+==== June 19, 2013 ====
+* Added support for IPv6. Taken from implementation of Lars Strand.
+
+==== March 19, 2013 ====
+* Fixing bug to prevent divide by 0 during run-time.
+    
+==== January 26, 2012 ====
+* Fixing BUG #4 - competability with python 2.x [tested with 2.7]
+- Packet data building is different for 2.x and 3.x.
+'cose of the string/bytes difference.
+* Fixing BUG #10 - the multiple resolv issue.
+- When pinging domain names insted of hosts (for exmaple google.com)
+you can get different IP every time you try to resolv it, we should
+resolv the host only once and stick to that IP.
+* Fixing BUGs #3 #10 - Doing hostname resolv only once.
+* Fixing BUG #14 - Removing all 'global' stuff.
+- You should not use globul! Its bad for you...and its not thread safe!
+* Fix - forcing the use of different times on linux/windows for
+more accurate mesurments. (time.time - linux/ time.clock - windows)
+* Adding quiet_ping function - This way we'll be able to use this script
+as external lib.
+* Changing default timeout to 3s. (1second is not enought)
+* Switching data syze to packet size. It's easyer for the user to ignore the
+fact that the packet headr is 8b and the datasize 64 will make packet with
 
 ==== Oct. 17, 2011 ====
 * [[https://github.com/jedie/python-ping/pull/6|Bugfix if host is unknown]]

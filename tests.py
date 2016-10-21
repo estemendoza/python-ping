@@ -4,12 +4,12 @@
 """
     python-ping unittests
     ~~~~~~~~~~~~~~~~~~~~~
-    
+
     Note that ICMP messages can only be send from processes running as root.
     So you must run this tests also as root, e.g.:
-    
+
         .../python-ping$ sudo python tests.py
-    
+
     :homepage: https://github.com/jedie/python-ping/
     :copyleft: 1989-2011 by the python-ping team, see AUTHORS for more details.
     :license: GNU GPL v2, see LICENSE for more details.
@@ -127,4 +127,3 @@ class TestPythonPing(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

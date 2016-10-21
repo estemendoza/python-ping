@@ -24,10 +24,12 @@ PACKAGE_ROOT = os.path.dirname(os.path.abspath(__file__))
 #VERBOSE = True
 VERBOSE = False
 
+
 def _error(msg):
     if VERBOSE:
         warnings.warn(msg)
     return ""
+
 
 def get_version_from_git():
     try:
@@ -37,7 +39,7 @@ def get_version_from_git():
             shell=False, cwd=PACKAGE_ROOT,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
-    except Exception, err:
+    except Exception as err:
         return _error("Can't get git hash: %s" % err)
 
     process.wait()
@@ -46,20 +48,20 @@ def get_version_from_git():
         return _error(
             "Can't get git hash, returncode was: %r"
             " - git stdout: %r"
-            " - git stderr: %r"
-            % (returncode, process.stdout.readline(), process.stderr.readline())
+            " - git stderr: %r" %
+            (returncode, process.stdout.readline(), process.stderr.readline())
         )
 
     output = process.stdout.readline().strip()
     try:
         raw_timestamp, hash = output.split("-", 1)
         timestamp = int(raw_timestamp)
-    except Exception, err:
+    except Exception as err:
         return _error("Error in git log output! Output was: %r" % output)
 
     try:
         timestamp_formatted = time.strftime("%Y.%m.%d", time.gmtime(timestamp))
-    except Exception, err:
+    except Exception as err:
         return _error("can't convert %r to time string: %s" % (timestamp, err))
 
     return "%s.%s" % (timestamp_formatted, hash)
@@ -70,9 +72,12 @@ def get_version_from_git():
 try:
     from creole.setup_utils import get_long_description
 except ImportError:
-    if "register" in sys.argv or "sdist" in sys.argv or "--long-description" in sys.argv:
+    if "register" in sys.argv \
+      or "sdist" in sys.argv \
+      or "--long-description" in sys.argv:
         etype, evalue, etb = sys.exc_info()
-        evalue = etype("%s - Please install python-creole >= v0.8 -  e.g.: pip install python-creole" % evalue)
+        evalue = etype("%s - Please install python-creole >= v0.8 -  "
+                       "e.g.: pip install python-creole" % evalue)
         raise etype, evalue, etb
     long_description = None
 else:
@@ -91,7 +96,7 @@ def get_authors():
             authors.append(line.strip(" *\r\n"))
         f.close()
         authors.sort()
-    except Exception, err:
+    except Exception as err:
         authors = "[Error: %s]" % err
     return authors
 
@@ -107,7 +112,7 @@ setup(
     url='https://github.com/jedie/python-ping/',
     keywords="ping icmp network latency",
     packages=find_packages(),
-    include_package_data=True, # include package data under svn source control
+    include_package_data=True,  # include package data under svn source control
     zip_safe=False,
     scripts=["ping.py"],
     classifiers=[
